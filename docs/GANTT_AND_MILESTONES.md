@@ -33,7 +33,7 @@
 
 ## Implementation phase order
 
-1. Repo + architecture + environment ← **current**
+1. Repo + architecture + environment
 2. Database + migrations
 3. Authentication + RBAC
 4. Frontend design system
@@ -51,3 +51,11 @@
 16. Monitoring
 17. Testing
 18. Deployment
+
+## Phase progress (13-15)
+
+| Phase | Status | Delivered |
+|-------|--------|-----------|
+| 13 Analytics | Done | Filtered timeseries/distribution/summary endpoints, CSV export, `/analytics` page (KPIs, charts, date + category filters) |
+| 14 Research dashboard | Done (partial scope) | Dataset summary, model registry, admin-only promote with audit, `/research` page. Not yet: dataset create/versioning, training-run launch |
+| 15 Admin dashboard | Done | User search/role/activation, audit-log filters, `/admin` page. Not yet: signup approvals, `/admin/system-health` (Phase 16) |
