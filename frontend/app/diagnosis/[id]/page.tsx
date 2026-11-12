@@ -11,7 +11,7 @@ import { Button } from "@/components/Button";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { SkeletonCard, SkeletonText } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
-import { api, ApiError, type Diagnosis } from "@/lib/api";
+import { api, ApiError, fetchDiagnosisReport, type Diagnosis } from "@/lib/api";
 import { formatConfidence, formatDate, STAGE_LABELS, cn } from "@/lib/utils";
 import { staggerContainer, staggerItem, easeSmooth } from "@/lib/motion";
 
@@ -39,6 +39,27 @@ export default function DiagnosisDetailPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("predictions");
+  const [downloading, setDownloading] = useState(false);
+
+  async function downloadReport() {
+    setDownloading(true);
+    try {
+      const blob = await fetchDiagnosisReport(id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `plantguard-report-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Download failed.";
+      toast.push({ title: "Couldn't download report", description: message, tone: "error" });
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -318,6 +339,13 @@ export default function DiagnosisDetailPage() {
             <Link href="/dashboard">
               <Button variant="outline">Back to dashboard</Button>
             </Link>
+            <Button
+              variant="secondary"
+              loading={downloading}
+              onClick={() => void downloadReport()}
+            >
+              Download PDF report
+            </Button>
           </motion.div>
         </motion.div>
       )}

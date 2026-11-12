@@ -314,6 +314,18 @@ export async function fetchAuthorizedBlobUrl(storagePath: string): Promise<strin
   return URL.createObjectURL(blob);
 }
 
+/** Fetch the diagnosis PDF report with auth and return it as a Blob. */
+export async function fetchDiagnosisReport(diagnosisId: string): Promise<Blob> {
+  const token = getAccessToken();
+  const res = await fetch(resolveUrl(`/diagnoses/${diagnosisId}/report`), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    throw new ApiError(`HTTP_${res.status}`, "Unable to download the PDF report.", null);
+  }
+  return res.blob();
+}
+
 export const api = {
   register(payload: { email: string; password: string; full_name: string }) {
     return apiRequest<AuthPayload>("/auth/register", {

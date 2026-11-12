@@ -54,6 +54,7 @@ Success responses use a consistent envelope with `success: true` and a `data` pa
 | GET | `/diagnoses` | Auth | List (paginated, filtered) |
 | GET | `/diagnoses/{id}` | Owner/Expert | Full diagnosis |
 | DELETE | `/diagnoses/{id}` | Owner/Admin | Delete |
+| GET | `/diagnoses/{id}/report` | Owner only | PDF report (`application/pdf`, attachment). 404 if not the owner's diagnosis |
 | GET | `/diagnoses/{id}/explanation` | Owner/Expert | XAI artifacts |
 
 ## AI

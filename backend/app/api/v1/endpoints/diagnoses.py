@@ -1,13 +1,15 @@
 from fastapi import APIRouter, BackgroundTasks
+from fastapi.responses import Response
 from sqlalchemy.orm import joinedload
 
 from app.api.deps import CurrentUser, DbSession, RequestId
 from app.core.config import settings
 from app.core.database import SessionLocal
-from app.core.errors import success_body
-from app.models import Diagnosis
+from app.core.errors import AppError, success_body
+from app.models import Crop, Diagnosis, Disease, Report
 from app.schemas.api import DiagnosisCreate
 from app.services.diagnosis import create_diagnosis, get_diagnosis, process_diagnosis
+from app.services.report import build_diagnosis_pdf
 from app.services.storage import storage_service
 
 router = APIRouter(prefix="/diagnoses", tags=["diagnoses"])
@@ -144,3 +146,40 @@ def explanation(diagnosis_id: str, db: DbSession, user: CurrentUser, request_id:
     diagnosis = get_diagnosis(db, diagnosis_id, user.id, user.role)
     data = _serialize(diagnosis)
     return success_body(data.get("explanation"), request_id)
+
+
+@router.get("/{diagnosis_id}/report")
+def report(diagnosis_id: str, db: DbSession, user: CurrentUser):
+    diagnosis = (
+        db.query(Diagnosis)
+        .options(
+            joinedload(Diagnosis.predictions),
+            joinedload(Diagnosis.recommendations),
+            joinedload(Diagnosis.explanation),
+            joinedload(Diagnosis.image),
+        )
+        .filter_by(id=diagnosis_id, user_id=user.id)
+        .first()
+    )
+    if not diagnosis:
+        raise AppError("NOT_FOUND", "Diagnosis not found.", 404)
+    crop = db.get(Crop, diagnosis.crop_id) if diagnosis.crop_id else None
+    top = min(diagnosis.predictions, key=lambda p: p.rank, default=None)
+    disease = db.get(Disease, top.disease_id) if top and top.disease_id else None
+    pdf = build_diagnosis_pdf(diagnosis, crop.name if crop else None, disease)
+    db.add(
+        Report(
+            user_id=user.id,
+            diagnosis_id=diagnosis.id,
+            report_type="diagnosis_pdf",
+            status="completed",
+        )
+    )
+    db.commit()
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="plantguard-report-{diagnosis.id}.pdf"'
+        },
+    )
