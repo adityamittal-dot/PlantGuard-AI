@@ -8,16 +8,21 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Button } from "./Button";
 
-const publicLinks = [
+type NavLink = { href: string; label: string; roles?: string[] };
+
+const publicLinks: NavLink[] = [
   { href: "/diseases", label: "Categories" },
   { href: "/crops", label: "Crops" },
   { href: "/help", label: "Help" },
 ];
 
-const appLinks = [
+const appLinks: NavLink[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/analyze", label: "Analyze" },
   { href: "/history", label: "History" },
+  { href: "/analytics", label: "Analytics" },
+  { href: "/research", label: "Research", roles: ["RESEARCHER", "ADMIN"] },
+  { href: "/admin", label: "Admin", roles: ["ADMIN"] },
   { href: "/diseases", label: "Categories" },
   { href: "/help", label: "Help" },
 ];
@@ -46,7 +51,9 @@ function MenuIcon({ open }: { open: boolean }) {
 export function Navbar({ variant = "marketing" }: { variant?: "marketing" | "app" }) {
   const { user, logout, loading } = useAuth();
   const pathname = usePathname();
-  const links = variant === "app" ? appLinks : publicLinks;
+  const links: NavLink[] = (variant === "app" ? appLinks : publicLinks).filter(
+    (l) => !l.roles || (user && l.roles.includes(user.role))
+  );
   const [open, setOpen] = useState(false);
 
   useEffect(() => {

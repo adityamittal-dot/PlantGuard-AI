@@ -138,6 +138,137 @@ export type AnalyticsOverview = {
   failed_diagnoses: number;
 };
 
+export type AnalyticsFilters = {
+  date_from?: string;
+  date_to?: string;
+  category?: string;
+};
+
+export type TimeseriesPoint = { date: string; count: number };
+
+export type AnalyticsTimeseries = {
+  date_from: string;
+  date_to: string;
+  category?: string | null;
+  total: number;
+  points: TimeseriesPoint[];
+};
+
+export type DistributionItem = { label: string; count: number; share: number };
+
+export type AnalyticsDistribution = { total: number; items: DistributionItem[] };
+
+export type AnalyticsSummary = AnalyticsOverview & {
+  confidence_by_category: { label: string; average_confidence: number; count: number }[];
+  quality_breakdown: { status: string; count: number }[];
+};
+
+export type DatasetClass = { label: string; count: number; share: number };
+
+export type DatasetSummary = {
+  name: string;
+  source_url: string;
+  source: string;
+  approximate: boolean;
+  total_images: number;
+  class_count: number;
+  imbalance_ratio: number | null;
+  classes: DatasetClass[];
+  note: string;
+};
+
+export type ModelMetrics = {
+  accuracy?: number | null;
+  precision?: number | null;
+  recall?: number | null;
+  f1_score?: number | null;
+  inference_time_ms?: number | null;
+};
+
+export type ModelVersionRow = {
+  id: string;
+  model_id: string;
+  model_name: string;
+  architecture: string;
+  framework: string;
+  version: string;
+  status: string;
+  is_active: boolean;
+  artifact_uri?: string | null;
+  artifact_available: boolean;
+  class_labels?: string[] | null;
+  metrics: ModelMetrics;
+  created_at: string;
+};
+
+export type ClassMetric = {
+  label: string;
+  precision: number;
+  recall: number;
+  f1: number;
+  support: number;
+};
+
+export type ActiveClassMetrics = {
+  model_version_id: string;
+  model_name: string;
+  version: string;
+  available: boolean;
+  classes: ClassMetric[];
+  macro?: { precision: number; recall: number; f1: number } | null;
+  accuracy?: number | null;
+  note?: string | null;
+};
+
+export type Paged<T> = {
+  total: number;
+  limit: number;
+  offset: number;
+  items: T[];
+};
+
+export type AdminUsersPage = Paged<User> & { roles: string[] };
+
+export type AuditLogEntry = {
+  id: string;
+  action: string;
+  user_id?: string | null;
+  user_email?: string | null;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  metadata?: Record<string, unknown> | null;
+  ip_address?: string | null;
+  created_at: string;
+};
+
+export type AuditLogPage = Paged<AuditLogEntry> & { actions: string[] };
+
+export type AdminUserFilters = {
+  q?: string;
+  role?: string;
+  is_active?: boolean;
+  limit?: number;
+  offset?: number;
+};
+
+export type AuditLogFilters = {
+  action?: string;
+  resource_type?: string;
+  date_from?: string;
+  date_to?: string;
+  limit?: number;
+  offset?: number;
+};
+
+function toQuery(params: object): string {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") qs.set(key, String(value));
+  }
+  const str = qs.toString();
+  return str ? `?${str}` : "";
+}
+
 export type Disease = {
   id: string;
   name: string;
@@ -326,6 +457,18 @@ export async function fetchDiagnosisReport(diagnosisId: string): Promise<Blob> {
   return res.blob();
 }
 
+/** Download the diagnoses CSV (honoring filters) with auth and return it as a Blob. */
+export async function fetchAnalyticsCsv(filters: AnalyticsFilters): Promise<Blob> {
+  const token = getAccessToken();
+  const res = await fetch(resolveUrl(`/analytics/export.csv${toQuery(filters)}`), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    throw new ApiError(`HTTP_${res.status}`, "Unable to export the CSV.", null);
+  }
+  return res.blob();
+}
+
 export const api = {
   register(payload: { email: string; password: string; full_name: string }) {
     return apiRequest<AuthPayload>("/auth/register", {
@@ -377,6 +520,48 @@ export const api = {
 
   analyticsOverview() {
     return apiRequest<AnalyticsOverview>("/analytics/overview");
+  },
+
+  analyticsSummary(filters: AnalyticsFilters = {}) {
+    return apiRequest<AnalyticsSummary>(`/analytics/summary${toQuery(filters)}`);
+  },
+
+  analyticsTimeseries(filters: AnalyticsFilters = {}) {
+    return apiRequest<AnalyticsTimeseries>(`/analytics/timeseries${toQuery(filters)}`);
+  },
+
+  analyticsDistribution(filters: AnalyticsFilters = {}) {
+    return apiRequest<AnalyticsDistribution>(`/analytics/distribution${toQuery(filters)}`);
+  },
+
+  researchDatasets() {
+    return apiRequest<DatasetSummary>("/research/datasets");
+  },
+
+  researchModels() {
+    return apiRequest<ModelVersionRow[]>("/research/models");
+  },
+
+  researchClassMetrics() {
+    return apiRequest<ActiveClassMetrics | null>("/research/models/active/class-metrics");
+  },
+
+  promoteModel(versionId: string) {
+    return apiRequest<ModelVersionRow>(`/research/models/${versionId}/promote`, {
+      method: "POST",
+    });
+  },
+
+  adminUsers(filters: AdminUserFilters = {}) {
+    return apiRequest<AdminUsersPage>(`/admin/users${toQuery(filters)}`);
+  },
+
+  adminUpdateUser(id: string, patch: { role?: string; is_active?: boolean }) {
+    return apiRequest<User>(`/admin/users/${id}`, { method: "PATCH", body: patch });
+  },
+
+  adminAuditLogs(filters: AuditLogFilters = {}) {
+    return apiRequest<AuditLogPage>(`/admin/audit-logs${toQuery(filters)}`);
   },
 
   listDiseases(q?: string) {
