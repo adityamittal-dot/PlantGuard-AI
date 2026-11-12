@@ -104,20 +104,19 @@ def seed_database(db: Session) -> None:
     )
     if not mv:
         # Keep any previous production rows but add the dataset-aligned version.
-        db.add(
-            ModelVersion(
-                model_id=model.id,
-                version="pathogen-v1",
-                artifact_uri=str(weight_path),
-                status=ModelVersionStatus.PRODUCTION.value,
-                class_labels=CLASS_LABELS,
-                f1_score=None,
-            )
+        mv = ModelVersion(
+            model_id=model.id,
+            version="pathogen-v1",
+            artifact_uri=str(weight_path),
+            status=ModelVersionStatus.PRODUCTION.value,
+            class_labels=CLASS_LABELS,
+            f1_score=None,
         )
+        db.add(mv)
     else:
         mv.class_labels = CLASS_LABELS
         mv.artifact_uri = str(weight_path)
-        mv.status = ModelVersionStatus.PRODUCTION.value
+        # Status is intentionally left alone so an admin promotion survives restarts.
 
     # Demote unrelated legacy production models so active labels stay consistent.
     for other in db.query(ModelVersion).filter_by(status=ModelVersionStatus.PRODUCTION.value).all():
@@ -126,4 +125,31 @@ def seed_database(db: Session) -> None:
         if other.class_labels != CLASS_LABELS:
             other.status = ModelVersionStatus.RETIRED.value
 
+    _register_meta_versions(db, model, mv)
     db.commit()
+
+
+def _register_meta_versions(db: Session, model: Model, primary: ModelVersion | None) -> None:
+    """Register extra registry rows for artifacts that have a meta.json (candidates only)."""
+    from app.core.config import settings
+
+    root = settings.model_root
+    candidates = [
+        ("resnet18-cnn-v1", root / "production_cnn.pt", root / "production_cnn.meta.json"),
+        ("sklearn-baseline-v1", root / "sklearn_baseline.pkl", root / "sklearn_baseline.meta.json"),
+    ]
+    primary_uri = primary.artifact_uri if primary is not None else None
+    for version, weights, meta in candidates:
+        if not meta.exists() or str(weights) == primary_uri:
+            continue
+        if db.query(ModelVersion).filter_by(model_id=model.id, version=version).first():
+            continue
+        db.add(
+            ModelVersion(
+                model_id=model.id,
+                version=version,
+                artifact_uri=str(weights),
+                status=ModelVersionStatus.CANDIDATE.value,
+                class_labels=CLASS_LABELS,
+            )
+        )

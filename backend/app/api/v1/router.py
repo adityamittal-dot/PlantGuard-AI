@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
     diagnoses,
     images,
     knowledge,
+    research,
     storage,
     system,
     users,
@@ -22,3 +23,4 @@ api_router.include_router(ai.router)
 api_router.include_router(knowledge.router)
 api_router.include_router(analytics.router)
 api_router.include_router(storage.router)
+api_router.include_router(research.router)
