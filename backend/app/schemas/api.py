@@ -155,3 +155,8 @@ class JobOut(BaseModel):
     stage: Optional[str] = None
     error_code: Optional[str] = None
     error_message: Optional[str] = None
+
+
+class AdminUserUpdate(BaseModel):
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
