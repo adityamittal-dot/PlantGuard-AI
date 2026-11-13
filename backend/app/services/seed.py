@@ -24,6 +24,19 @@ def seed_database(db: Session) -> None:
             )
         )
 
+    # Regular test account for trying the app locally.
+    if not db.query(User).filter_by(email="test@plantguard.ai").first():
+        db.add(
+            User(
+                email="test@plantguard.ai",
+                password_hash=hash_password("TestUser123!"),
+                full_name="Test User",
+                role=UserRole.USER.value,
+                is_verified=True,
+                is_active=True,
+            )
+        )
+
     # Single general crop profile — this dataset is pathogen-category, not crop-specific.
     crop = db.query(Crop).filter_by(slug="general-field-crops").first()
     if not crop:

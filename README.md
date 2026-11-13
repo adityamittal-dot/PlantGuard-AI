@@ -30,7 +30,16 @@ lab has confirmed a specific fungal species. See
 
 Installs backend/frontend dependencies on first run, then starts the API
 (`http://localhost:8000/docs`) and the web app (`http://localhost:3000`).
-Ctrl+C stops both. The sections below cover running each part manually.
+Ctrl+C stops both.
+
+**Test accounts** (seeded automatically on first start, local use only):
+
+| Role | Email | Password |
+|------|-------|----------|
+| User | `test@plantguard.ai` | `TestUser123!` |
+| Admin | `admin@plantguard.ai` | `ChangeMeAdmin123!` |
+
+The sections below cover running each part manually.
 
 ## Quick start (backend)
 

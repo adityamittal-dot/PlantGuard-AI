@@ -19,10 +19,10 @@ fi
 
 cleanup() {
   trap - EXIT INT TERM
+  trap '' TERM                       # don't kill ourselves before servers stop
   echo
   echo "==> Stopping servers..."
-  pkill -TERM -P $$ 2>/dev/null || true   # stop the two subshells' children
-  kill $(jobs -p) 2>/dev/null || true
+  kill -TERM -- -$$ 2>/dev/null || kill $(jobs -p) 2>/dev/null || true
   wait 2>/dev/null || true
   echo "==> Stopped."
 }
