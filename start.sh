@@ -17,7 +17,16 @@ if [ ! -d "$ROOT/frontend/node_modules" ]; then
   (cd "$ROOT/frontend" && npm install)
 fi
 
-trap 'trap - EXIT INT TERM; kill 0 2>/dev/null; wait' EXIT INT TERM
+cleanup() {
+  trap - EXIT INT TERM
+  echo
+  echo "==> Stopping servers..."
+  pkill -TERM -P $$ 2>/dev/null || true   # stop the two subshells' children
+  kill $(jobs -p) 2>/dev/null || true
+  wait 2>/dev/null || true
+  echo "==> Stopped."
+}
+trap cleanup EXIT INT TERM
 
 echo "==> Backend:  http://localhost:8000/docs"
 (cd "$ROOT/backend" && .venv/bin/uvicorn app.main:app --reload --port 8000) &

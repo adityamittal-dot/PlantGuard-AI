@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
-import { Manrope, Source_Serif_4 } from "next/font/google";
+import localFont from "next/font/local";
 import { AuthProvider } from "@/lib/auth";
 import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
 
-const manrope = Manrope({
-  subsets: ["latin"],
+// Fonts are bundled locally so dev/build works without internet access.
+const manrope = localFont({
+  src: "./fonts/Manrope.woff2",
+  weight: "200 800",
   variable: "--font-manrope",
   display: "swap",
 });
 
-const sourceSerif = Source_Serif_4({
-  subsets: ["latin"],
+const sourceSerif = localFont({
+  src: "./fonts/SourceSerif4.woff2",
+  weight: "200 900",
   variable: "--font-source-serif",
   display: "swap",
 });
