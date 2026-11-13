@@ -19,6 +19,7 @@ import {
 import { formatConfidence, formatDate } from "@/lib/utils";
 import { fadeUp, staggerContainer, staggerItem } from "@/lib/motion";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 
 function statusTone(status: string) {
   const s = status.toUpperCase();
@@ -30,6 +31,7 @@ function statusTone(status: string) {
 export default function DashboardPage() {
   const router = useRouter();
   const toast = useToast();
+  const { user } = useAuth();
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
   const [recent, setRecent] = useState<Diagnosis[]>([]);
   const [error, setError] = useState("");
@@ -121,6 +123,29 @@ export default function DashboardPage() {
               value={overview?.diseased_detections ?? 0}
             />
           </motion.div>
+
+          <section className="mt-12">
+            <h2 className="font-display text-2xl">Explore</h2>
+            <ul className="mt-4 grid gap-4 sm:grid-cols-3">
+              {[
+                { href: "/analytics", title: "Analytics", text: "Trends, category mix and CSV export.", roles: undefined },
+                { href: "/research", title: "Research", text: "Dataset, model registry and per-class metrics.", roles: ["RESEARCHER", "ADMIN"] },
+                { href: "/admin", title: "Admin", text: "Users, roles and the audit log.", roles: ["ADMIN"] },
+              ]
+                .filter((l) => !l.roles || (user && l.roles.includes(user.role)))
+                .map((l) => (
+                  <li key={l.href}>
+                    <Link
+                      href={l.href}
+                      className="block rounded-lg border border-charcoal/10 bg-white p-4 transition-colors hover:border-emerald"
+                    >
+                      <p className="font-medium text-charcoal">{l.title}</p>
+                      <p className="mt-1 text-sm text-charcoal/55">{l.text}</p>
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </section>
 
           <section className="mt-12">
             <div className="flex items-baseline justify-between gap-4">

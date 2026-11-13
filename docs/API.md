@@ -89,32 +89,44 @@ Job states: `QUEUED` | `PROCESSING` | `COMPLETED` | `FAILED` | `CANCELLED`
 
 ## Analytics
 
+Scoped to the caller's own diagnoses; admins see all users. Shared query params
+(all optional): `date_from`, `date_to` (inclusive, `YYYY-MM-DD`, max 366 days apart)
+and `category` (one of `Bacteria`, `Fungi`, `Healthy`, `Pests`, `Virus`, matched on the
+top prediction). Invalid ranges/categories return 422.
+
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/analytics/overview` | Researcher+ | KPI summary |
-| GET | `/analytics/diseases` | Researcher+ | Disease distribution |
-| GET | `/analytics/crops` | Researcher+ | Crop distribution |
-| GET | `/analytics/trends` | Researcher+ | Time series |
+| GET | `/analytics/overview` | Auth | Unfiltered KPI summary (dashboard) |
+| GET | `/analytics/timeseries` | Auth | Zero-filled daily diagnosis counts (default: last 30 days) |
+| GET | `/analytics/distribution` | Auth | Category distribution of completed diagnoses |
+| GET | `/analytics/summary` | Auth | KPIs, average confidence (overall + per category), quality-status breakdown |
+| GET | `/analytics/export.csv` | Auth | CSV download of diagnoses (admins also get `user_email`) |
 
 ## Research
 
+Roles: `RESEARCHER` or `ADMIN` (admin always passes `require_roles`).
+
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/datasets` | Researcher+ | List datasets |
-| POST | `/datasets` | Researcher+ | Create |
-| POST | `/datasets/{id}/versions` | Researcher+ | New version |
-| GET | `/models` | Researcher+ | Registry |
-| POST | `/training-runs` | Researcher+ | Launch training |
-| GET | `/training-runs/{id}` | Researcher+ | Run status |
+| GET | `/research/datasets` | Researcher+ | Class counts parsed from `ml/datasets/DATASET.md` (seeded fallback); no downloads |
+| GET | `/research/models` | Researcher+ | Model registry: versions with status, metrics (DB columns, falling back to the `*.meta.json` beside the artifact) and `artifact_available` |
+| GET | `/research/models/active/class-metrics` | Researcher+ | Per-class precision/recall/F1/support of the production version (from its meta.json classification report); `null` if no active model |
+| POST | `/research/models/{version_id}/promote` | Admin | Make a version `production`; previous production versions become `approved`. 404 unknown, 409 already active or artifact missing. Writes `model.promote` audit row |
+
+Planned (not implemented): `POST /datasets`, `POST /datasets/{id}/versions`, `/training-runs`.
 
 ## Admin
 
+All endpoints require `ADMIN`. Every mutation writes an `audit_logs` row.
+
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/admin/users` | Admin | User management |
-| PATCH | `/admin/users/{id}` | Admin | Role/status updates |
-| GET | `/admin/audit-logs` | Admin | Audit trail |
-| GET | `/admin/system-health` | Admin | Health snapshot |
+| GET | `/admin/users` | Admin | Paginated list; params `q` (email/name), `role`, `is_active`, `limit` (1-200, default 50), `offset`. Returns `{total, limit, offset, roles, items}` |
+| PATCH | `/admin/users/{id}` | Admin | Body `{role?, is_active?}`. Audit actions `user.role_change`, `user.activate`, `user.deactivate`. Deactivation revokes refresh tokens. 400 `SELF_MODIFICATION` for own account, 409 `LAST_ADMIN`, 422 invalid role |
+| GET | `/admin/audit-logs` | Admin | Paginated, newest first; filters `action`, `user_id`, `resource_type`, `date_from`, `date_to`; returns `actions` (distinct action names) for filter UIs |
+| GET | `/admin/system-health` | Admin | Planned (Phase 16) |
+
+Audit action names written so far: `model.promote`, `user.role_change`, `user.activate`, `user.deactivate`.
 
 ## Cross-cutting requirements
 

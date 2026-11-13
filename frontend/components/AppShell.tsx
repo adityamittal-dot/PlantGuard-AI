@@ -10,6 +10,9 @@ const PROTECTED_PREFIXES = [
   "/analyze",
   "/diagnosis",
   "/history",
+  "/analytics",
+  "/research",
+  "/admin",
 ];
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
