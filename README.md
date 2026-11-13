@@ -22,6 +22,16 @@ lab has confirmed a specific fungal species. See
 | `infra/` | nginx config, CI workflow template |
 | `docs/` | Architecture, API, database, deployment, security, and research docs |
 
+## Quick start (one command)
+
+```bash
+./start.sh
+```
+
+Installs backend/frontend dependencies on first run, then starts the API
+(`http://localhost:8000/docs`) and the web app (`http://localhost:3000`).
+Ctrl+C stops both. The sections below cover running each part manually.
+
 ## Quick start (backend)
 
 The API runs standalone against SQLite and local disk storage — no Docker,
